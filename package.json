@@ -1,0 +1,14 @@
+{
+  "name": "qiyu-risk-monitor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "七鱼客服会话 AI 风险监控：iframe 展示 + 扩展采集 + 飞书卡片",
+  "scripts": {
+    "start": "node server/index.mjs",
+    "test": "node --test test/rules.test.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

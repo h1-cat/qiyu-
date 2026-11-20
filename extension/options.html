@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>七鱼会话监控设置</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <main>
+    <h1>七鱼会话监控设置</h1>
+    <p class="hint">扩展只负责采集。这里勾选你负责的客服组，采集到的会话交给服务器分析和推送飞书。</p>
+    <section>
+      <h2>告警客服组</h2>
+      <p class="hint">只采集勾选的组；全部不勾 = 采集全部组。每个人按自己负责的组勾选即可。</p>
+      <div id="groupList" class="groups"></div>
+    </section>
+    <section>
+      <h2>服务地址</h2>
+      <p class="hint">默认已指向公司服务器，一般不用改。</p>
+      <input id="endpoint" type="text" placeholder="http://127.0.0.1:8787">
+    </section>
+    <section>
+      <h2>监控台地址（可选）</h2>
+      <p class="hint">填其他监控者能打开的地址，飞书卡片上的「查看会话详情」会用它。</p>
+      <input id="dashboardUrl" type="text" placeholder="http://127.0.0.1:8787">
+    </section>
+    <div class="actions">
+      <button id="saveBtn" class="primary">保存</button>
+      <button id="testBtn">测试连接</button>
+    </div>
+    <p id="status" class="status"></p>
+  </main>
+  <script type="module" src="options.js"></script>
+</body>
+</html>

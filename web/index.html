@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>七鱼会话 AI 风险监控</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <span class="logo">◎</span>
+      <div>
+        <h1>七鱼会话 AI 风险监控</h1>
+        <p id="subtitle">正在连接本机服务…</p>
+      </div>
+    </div>
+    <div class="status" id="statusPill">
+      <span class="dot" id="statusDot"></span>
+      <span id="statusText">连接中</span>
+    </div>
+    <div class="account" id="accountChip" title="由扩展从七鱼页面读取">
+      <span class="account-label">七鱼账号</span>
+      <span class="account-value" id="accountValue">未识别</span>
+    </div>
+    <div class="actions">
+      <button id="resetFrame" class="ghost">重置工作台</button>
+      <button id="toggleWorkspace" class="ghost">全屏工作台</button>
+      <button id="toggleIframe" class="ghost">隐藏工作台</button>
+      <a id="openWorkspace" class="ghost" target="_blank" rel="noopener">新标签打开</a>
+      <button id="llmBtn" class="ghost">模型设置</button>
+      <button id="pauseBtn" class="ghost">暂停监控</button>
+      <button id="simulateBtn" class="primary">模拟高危告警</button>
+    </div>
+  </header>
+
+  <main id="layout">
+    <section class="pane workspace" id="workspacePane">
+      <div class="pane-head">
+        <span>七鱼工作台</span>
+        <span class="hint">iframe 展示 · 扩展采集</span>
+      </div>
+      <div class="iframe-wrap">
+        <iframe id="qiyuFrame" title="七鱼客服工作台" allow="clipboard-read; clipboard-write"></iframe>
+        <div class="iframe-tip" id="iframeTip">
+          若 iframe 显示登录页或空白，请在右上角“新标签打开”登录七鱼；扩展会在独立标签页同样采集，风险流不受影响。
+        </div>
+      </div>
+    </section>
+
+    <section class="pane risk">
+      <div class="stats" id="stats">
+        <div class="stat high"><span class="num" id="statHigh">0</span><span class="label">高危</span></div>
+        <div class="stat medium"><span class="num" id="statMedium">0</span><span class="label">中危</span></div>
+        <div class="stat"><span class="num" id="statAlerts">0</span><span class="label">告警总数</span></div>
+        <div class="stat"><span class="num" id="statSessions">0</span><span class="label">监控会话</span></div>
+        <div class="stat"><span class="num" id="statMessages">0</span><span class="label">消息数</span></div>
+      </div>
+
+      <div class="risk-head">
+        <h2>风险流</h2>
+        <div class="group-filter" id="groupFilterWrap">
+          <button id="groupFilterBtn" class="group-select" type="button" title="按客服组筛选风险流">全部客服组 ▾</button>
+          <div id="groupFilterPanel" class="group-panel" hidden></div>
+        </div>
+        <span class="group-alert-btn" style="font-size:12px;color:#8a8f99" title="每台采集机在自己的扩展设置里勾选负责的客服组">告警组：在扩展设置里配置</span>
+        <div class="filters" id="filters">
+          <button class="chip active" data-level="all">全部</button>
+          <button class="chip" data-level="high">高危</button>
+          <button class="chip" data-level="medium">中危</button>
+        </div>
+      </div>
+
+      <div class="alert-list" id="alertList">
+        <div class="empty" id="emptyState">
+          <div class="empty-icon">🛡️</div>
+          <p>等待风险事件…</p>
+          <small>扩展采集到新消息后，规则引擎会实时分析；中高风险会推送飞书卡片。</small>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal-mask" id="llmModal" hidden>
+    <div class="modal">
+      <div class="modal-head">
+        <h3>AI 模型设置</h3>
+        <button id="llmClose" class="icon-btn" aria-label="关闭">×</button>
+      </div>
+      <label class="switch-row">
+        <input type="checkbox" id="llmEnabled" />
+        <span>启用 LLM 语义分析（关闭则只用规则引擎）</span>
+      </label>
+      <label class="field">
+        <span>接口地址</span>
+        <input id="llmBaseUrl" placeholder="https://api.deepseek.com" />
+      </label>
+      <label class="field">
+        <span>模型名称</span>
+        <input id="llmModel" placeholder="deepseek-chat" />
+      </label>
+      <label class="field">
+        <span>API Key</span>
+        <input id="llmApiKey" type="password" placeholder="sk-...（留空表示不修改）" />
+      </label>
+      <p class="modal-hint" id="llmKeyHint">未配置 Key</p>
+      <div class="modal-actions">
+        <button id="llmTest" class="ghost">测试连接</button>
+        <button id="llmSave" class="primary">保存</button>
+      </div>
+      <p class="modal-status" id="llmStatus"></p>
+    </div>
+  </div>
+
+  <div class="modal-mask" id="alertGroupsModal" hidden>
+    <div class="modal alert-groups-modal">
+      <div class="modal-head">
+        <h3>飞书告警组</h3>
+        <button id="alertGroupsClose" class="icon-btn" aria-label="关闭">×</button>
+      </div>
+      <p class="modal-hint">勾选需要发送飞书告警的客服组；全部不选 = 所有组都告警。</p>
+      <div class="alert-groups-list" id="alertGroupsList"></div>
+      <div class="modal-actions">
+        <button id="alertGroupsCancel" class="ghost">取消</button>
+        <button id="alertGroupsSave" class="primary">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-mask" id="sessionModal" hidden>
+    <div class="modal session-modal">
+      <div class="modal-head">
+        <h3 id="sessionTitle">会话详情</h3>
+        <button id="sessionClose" class="icon-btn" aria-label="关闭">×</button>
+      </div>
+      <div class="session-meta" id="sessionMeta">加载中…</div>
+      <div class="session-messages" id="sessionMessages"></div>
+      <div class="modal-actions">
+        <a id="sessionOpenQiyu" class="ghost" target="_blank" rel="noopener">打开七鱼监控端</a>
+        <button id="sessionCloseBtn" class="primary">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/app.js?v=20261025"></script>
+</body>
+</html>

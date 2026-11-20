@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "七鱼会话风险采集",
+  "version": "0.3.9",
+  "description": "只读采集七鱼客服工作台会话消息，上报监控服务；分析与飞书推送由服务端完成",
+  "permissions": [
+    "storage",
+    "alarms",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://*.qiyukf.com/*",
+    "http://*/*",
+    "http://127.0.0.1:8787/*",
+    "http://localhost:8787/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.qiyukf.com/*"
+      ],
+      "js": [
+        "bridge.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "inject.js"
+      ],
+      "matches": [
+        "https://*.qiyukf.com/*"
+      ]
+    }
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
+  "action": {
+    "default_title": "七鱼会话风险采集（只读）"
+  }
+}
