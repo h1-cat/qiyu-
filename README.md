@@ -8,7 +8,7 @@
 - **采集完全由浏览器扩展完成**（跨域 iframe 无法直接读 DOM，扩展是唯一稳妥通道）；
 - iframe 只是“展示 + 采集宿主”：扩展在 iframe 或独立标签页里都能采集，隐藏 iframe 不影响监控；
 - 默认使用**规则引擎**（无需 API Key）；预留 OpenAI 兼容 LLM 接口，填 Key 即可启用；
-- 全部本机运行，数据只落本机 `data/` 目录。
+- 服务跑在公司服务器上（systemd 托管），数据落服务器 `data/` 目录；扩展和监控台只负责采集与展示。
 
 ## 1. 目录结构
 
@@ -24,25 +24,25 @@
   web/                   # 监控台页面（原生 JS，无构建）
   extension/             # Chrome/Edge MV3 扩展（只读采集）
   test/rules.test.mjs    # 单元测试
-  start.ps1 / stop.ps1   # 本机启动/停止
+  package-extension.mjs  # 打包扩展（把服务器地址写进默认值）
+  config/                # 客服组 -> 采集组映射（示例 + 实际）
+  docs/ACCEPTANCE.md     # 验收清单
   data/                  # 运行时数据（messages/alerts/raw JSONL）
 ```
 
-## 2. 快速开始
+## 2. 部署（服务器）
 
-前置：Node.js >= 20（本机已装 v22）。
+前置：Linux 服务器 + Node.js >= 20。
 
-- 双击 **`start.cmd`**（推荐：自动绕过 PowerShell 脚本执行策略、启动服务并打开监控台）；
-- 停止服务双击 **`stop.cmd`**；
-- 也可以手动运行：
-
-```powershell
-cd D:\deepseek工作区\七鱼会话监控
-Copy-Item .env.example .env        # 首次
-node server/index.mjs
+```bash
+cd /opt/qiyu-monitor
+cp .env.example .env        # 首次：填飞书 webhook、LLM key
+node server/index.mjs       # 前台试跑，确认能起来
 ```
 
-打开 <http://127.0.0.1:8787>。
+长期运行交给 systemd（`/etc/systemd/system/qiyu-monitor.service`，`Restart=always`）。改逻辑后流程是：`git pull` → `systemctl restart qiyu-monitor`，**扩展不用跟着更新**。
+
+浏览器打开 `http://YOUR_SERVER_IP:8787`。
 
 **首次登录**：七鱼登录页允许被 iframe 嵌入，可直接在监控台左侧 iframe 里登录；如果 iframe 登录失败（第三方 Cookie 限制），点右上角“新标签打开”登录，扩展在独立标签页同样采集，右侧风险流不受影响。
 
@@ -91,7 +91,7 @@ v0.3.0 起扩展只做**只读采集**：抓到的七鱼会话帧全部上报服
 配置后重启服务，访问 `POST /api/test-feishu` 验证卡片：
 
 ```powershell
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8787/api/test-feishu -ContentType 'application/json' -Body '{}'
+Invoke-RestMethod -Method Post -Uri http://YOUR_SERVER_IP:8787/api/test-feishu -ContentType 'application/json' -Body '{}'
 ```
 
 ## 5. 使用
@@ -116,7 +116,7 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8787/api/test-feishu -Conte
 node --test test/rules.test.mjs
 
 # 模拟一条高危访客消息（会触发规则 + 飞书 dry-run/真实通知）
-Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8787/api/simulate -ContentType 'application/json' -Body '{"preset":"high"}'
+Invoke-RestMethod -Method Post -Uri http://YOUR_SERVER_IP:8787/api/simulate -ContentType 'application/json' -Body '{"preset":"high"}'
 
 # 模拟扩展上报原始七鱼帧
 # body: {"source":"extension","frames":[{"transport":"ws","data":"{...}"}]}
@@ -127,7 +127,7 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8787/api/simulate -ContentT
 七鱼前端协议可能随版本变化，所以项目内置“原始帧探针”：
 
 1. 装好扩展、打开七鱼工作台，随便收发几条消息；
-2. 打开 <http://127.0.0.1:8787/api/raw> 查看最近原始帧；
+2. 打开 `http://YOUR_SERVER_IP:8787/api/raw` 查看最近原始帧；
 3. 如果风险流没有新消息，说明 `server/normalize.mjs` 还没适配该版本字段：
    - 把 `/api/raw` 里的样本文本发给我，或
    - 直接在 `normalize.mjs` 的 `TEXT_KEYS / SESSION_KEYS / ID_KEYS` 里补字段名；
