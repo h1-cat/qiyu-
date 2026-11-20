@@ -24,7 +24,7 @@
   web/                   # 监控台页面（原生 JS，无构建）
   extension/             # Chrome/Edge MV3 扩展（只读采集）
   test/rules.test.mjs    # 单元测试
-  package-extension.mjs  # 打包扩展（把服务器地址写进默认值）
+  package-extension.mjs  # 打包扩展（往 dist/env.js 写入服务器地址）
   config/                # 客服组 -> 采集组映射（示例 + 实际）
   docs/ACCEPTANCE.md     # 验收清单
   data/                  # 运行时数据（messages/alerts/raw JSONL）
@@ -57,7 +57,7 @@ v0.3.0 起扩展只做**只读采集**：抓到的七鱼会话帧全部上报服
 2. 打开右上角 **开发者模式**；
 3. 点 **加载解压缩的扩展**，选择 `七鱼会话监控扩展` 文件夹（或解压 `七鱼会话监控扩展.zip` 后选解压目录）；
 4. 列表中确认“七鱼会话风险采集”已启用，版本 `0.3.0`；
-5. 点扩展的「详情」→「扩展程序选项」，把服务地址改成你的服务器地址（例如 `http://YOUR_SERVER_IP:8787`），点「测试连接」应显示成功。
+5. 服务地址来自扩展目录下的 `env.js`：从 `extension/env.example.js` 复制一份，把地址改成你们的服务器（例如 `http://YOUR_SERVER_IP:8787`）。`env.js` 已在 `.gitignore` 里，真实地址不会进仓库；选项页因此不需要填地址，点「测试连接」应显示成功。
 
 ### 夸克
 夸克 PC 版基于 Chromium，入口为 `quark://extensions`（若版本不支持加载解压扩展，请改用 Edge）。

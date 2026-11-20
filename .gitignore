@@ -11,6 +11,9 @@ logs/
 # 服务器上实际填写的组映射（示例文件保留）
 config/agent-groups.json
 
+# 扩展的本地私有配置（含真实服务器地址，绝对不能提交）
+extension/env.js
+
 # 依赖与系统文件
 node_modules/
 .DS_Store

@@ -5,7 +5,6 @@
   var FLUSH_MS = 400;
   var queue = [];
   var flushTimer = null;
-  var endpoint = 'http://127.0.0.1:8787';
   var lastToken = '';
 
   function inject() {

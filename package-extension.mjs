@@ -1,6 +1,6 @@
-// 打包扩展：把服务器地址写进默认值，别人装上就能用，不用手动填。
+// 打包扩展：把服务器地址写进 env.js，别人装上就能用，不用手动填。
 // 用法：node package-extension.mjs http://YOUR_SERVER:8787
-import { readFileSync, writeFileSync, rmSync, cpSync, existsSync } from 'node:fs';
+import { writeFileSync, rmSync, cpSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -14,26 +14,22 @@ if (!endpoint || !/^https?:\/\//.test(endpoint)) {
 const src = path.join(root, 'extension');
 const out = path.join(root, 'dist', 'extension');
 if (existsSync(path.join(root, 'dist'))) rmSync(path.join(root, 'dist'), { recursive: true, force: true });
-cpSync(src, out, { recursive: true });
 
-function patch(file, replacements) {
-  const p = path.join(out, file);
-  let text = readFileSync(p, 'utf8');
-  for (const [from, to] of replacements) {
-    if (!text.includes(from)) {
-      console.warn('[warn] 未找到待替换内容，可能已改过：', file, from.slice(0, 40));
-      continue;
-    }
-    text = text.split(from).join(to);
-  }
-  writeFileSync(p, text, 'utf8');
-}
+// 源码里的 env.js 是本机私有的，不要带进发布包
+cpSync(src, out, {
+  recursive: true,
+  filter: (from) => {
+    const name = path.basename(from);
+    return name !== 'env.js' && name !== 'env.example.js';
+  },
+});
 
-patch('background.js', [["const DEFAULT_ENDPOINT = 'http://127.0.0.1:8787';", `const DEFAULT_ENDPOINT = '${endpoint}';`]]);
-patch('options.js', [["const DEFAULT_ENDPOINT = 'http://127.0.0.1:8787';", `const DEFAULT_ENDPOINT = '${endpoint}';`]]);
-patch('options.html', [
-  ['placeholder="http://127.0.0.1:8787"', `placeholder="${endpoint}"`]
-]);
+writeFileSync(
+  path.join(out, 'env.js'),
+  `// 打包生成，请勿手改。\nexport const SERVER_BASE = '${endpoint}';\n`,
+  'utf8'
+);
 
 console.log('已生成：', out);
 console.log('服务地址：', endpoint);
+console.log('在浏览器里加载 dist/extension 即可，选项页不再需要填地址。');

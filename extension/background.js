@@ -1,9 +1,9 @@
 // 后台：只做只读采集，把七鱼会话帧上报到监控服务。
 // 分析、LLM 复核、飞书推送全在服务端；扩展只按本机勾选的客服组决定采集哪些会话。
-const DEFAULT_ENDPOINT = 'http://127.0.0.1:8787';
+import { SERVER_BASE } from './env.js';
 const MAX_QUEUE = 500;
 let queue = [];
-let endpoint = DEFAULT_ENDPOINT;
+const endpoint = SERVER_BASE;
 let flushing = false;
 let flushTimer = null;
 let qiyuToken = '';
@@ -15,8 +15,7 @@ const lastCt = {};
 const lastRound = {};
 const debugSent = new Set();
 
-chrome.storage.local.get({ endpoint: DEFAULT_ENDPOINT, alertGroups: [] }, (cfg) => {
-  endpoint = normalize(cfg.endpoint);
+chrome.storage.local.get({ alertGroups: [] }, (cfg) => {
   alertGroups = normalizeGroups(cfg.alertGroups);
 });
 chrome.storage.local.get({ qiyuToken: '', qiyuOrigin: 'https://example.qiyukf.com' }, (cfg) => {
@@ -25,14 +24,8 @@ chrome.storage.local.get({ qiyuToken: '', qiyuOrigin: 'https://example.qiyukf.co
 });
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
-  if (changes.endpoint) endpoint = normalize(changes.endpoint.newValue);
   if (changes.alertGroups) alertGroups = normalizeGroups(changes.alertGroups.newValue);
 });
-
-function normalize(value) {
-  const s = String(value || DEFAULT_ENDPOINT).trim().replace(/\/+$/, '');
-  return s || DEFAULT_ENDPOINT;
-}
 
 function normalizeGroups(value) {
   return Array.isArray(value) ? value.map((g) => String(g).trim()).filter(Boolean) : [];
@@ -192,9 +185,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.local.get({ endpoint: DEFAULT_ENDPOINT }, (cfg) => {
-    if (!cfg.endpoint) chrome.storage.local.set({ endpoint: DEFAULT_ENDPOINT });
-  });
   // 扩展更新/重载后，页面里旧的注入脚本会失效；自动刷新七鱼页让它重新注入
   reloadQiyuTabs();
 });

@@ -1,11 +1,10 @@
-const DEFAULT_ENDPOINT = 'http://127.0.0.1:8787';
+import { SERVER_BASE } from './env.js';
+
 const $ = (sel) => document.querySelector(sel);
 const escapeHtml = (s) => String(s || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 async function load() {
-  const cfg = await chrome.storage.local.get({ endpoint: DEFAULT_ENDPOINT, dashboardUrl: '', alertGroups: [], groupOptions: [] });
-  $('#endpoint').value = cfg.endpoint || DEFAULT_ENDPOINT;
-  $('#dashboardUrl').value = cfg.dashboardUrl || '';
+  const cfg = await chrome.storage.local.get({ alertGroups: [], groupOptions: [] });
   const groups = Array.isArray(cfg.groupOptions) ? cfg.groupOptions : [];
   const selected = new Set((cfg.alertGroups || []).map((s) => String(s).trim()));
   const list = $('#groupList');
@@ -17,23 +16,16 @@ async function load() {
   }
 }
 
-function endpointValue() {
-  return $('#endpoint').value.trim().replace(/\/+$/, '') || DEFAULT_ENDPOINT;
-}
-
 async function save() {
-  const endpoint = endpointValue();
-  const dashboardUrl = $('#dashboardUrl').value.trim().replace(/\/+$/, '');
   const alertGroups = [...document.querySelectorAll('#groupList input:checked')].map((el) => el.value);
-  await chrome.storage.local.set({ endpoint, dashboardUrl, alertGroups });
+  await chrome.storage.local.set({ alertGroups });
   $('#status').textContent = alertGroups.length ? `已保存：只采集 ${alertGroups.length} 个组` : '已保存：采集全部组';
 }
 
 async function testConnection() {
-  const endpoint = endpointValue();
   $('#status').textContent = '连接中…';
   try {
-    const res = await fetch(endpoint + '/api/health', { cache: 'no-store' });
+    const res = await fetch(SERVER_BASE + '/api/health', { cache: 'no-store' });
     $('#status').textContent = res.ok ? '连接成功，服务器在线' : '连接失败：HTTP ' + res.status;
   } catch (err) {
     $('#status').textContent = '连接失败：' + (err?.message || err);
