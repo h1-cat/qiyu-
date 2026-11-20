@@ -134,7 +134,12 @@ export function buildCard(alert, config) {
     config: { wide_screen_mode: true },
     header: {
       template: meta.template,
-      title: { tag: 'plain_text', content: `${meta.emoji}【${meta.label}】${alert.groupName || '未分组'}会话预警${alert.alertCount > 1 ? `（第${alert.alertCount}次）` : ''}` }
+      title: {
+        tag: 'plain_text',
+        content: alert.groupName === '排队中'
+          ? `${meta.emoji}【${meta.label}】排队中 · 需立即认领${alert.alertCount > 1 ? `（第${alert.alertCount}次）` : ''}`
+          : `${meta.emoji}【${meta.label}】${alert.groupName || '未分组'}会话预警${alert.alertCount > 1 ? `（第${alert.alertCount}次）` : ''}`
+      }
     },
     body: { elements }
   };

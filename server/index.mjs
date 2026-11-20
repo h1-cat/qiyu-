@@ -117,11 +117,16 @@ function extractGroupData(frame) {
   }
 }
 
+// 排队提示语：这些不是真人客服说的话，不能算「已接起」
+const QUEUE_HINT = /(正在努力接待|客服咨询量过大|请耐心等待|排队中|正快马加鞭|稍等片刻)/;
+
+function humanAgentReplied(session) {
+  return (session?.messages || []).some((m) => m.direction === 'agent' && !QUEUE_HINT.test(m.text));
+}
+
 function makeAlert(msg, analysis, session) {
   const meta = store.monitorSessions.get(String(msg.sessionId));
-  const queueHint = /(正在努力接待|客服咨询量过大|请耐心等待|排队中|正快马加鞭|稍等片刻)/;
-  const agentMessages = (session?.messages || []).filter((m) => m.direction === 'agent');
-  const humanReplied = agentMessages.some((m) => !queueHint.test(m.text));
+  const humanReplied = humanAgentReplied(session);
   const agentName = humanReplied
     ? (msg.agentName || session?.meta?.agentName || meta?.staffName || '')
     : '';
@@ -190,6 +195,13 @@ async function processMessage(msg) {
     return null;
   }
   // 分析结果不再逐条广播，告警时才推送
+
+  // 排队中的会话只报安全类高危
+  // 客服还没接起时，访客常连续刷屏发泄，中危报出来没有人能处理；
+  // 但自杀/自残、明确高危必须第一时间有人去排队列表里认领这个会话。
+  if (!humanAgentReplied(session) && !safety) {
+    return null;
+  }
 
   const threshold = LEVEL_RANK[config.alertMinLevel] ?? 1;
   if (LEVEL_RANK[analysis.level] >= threshold) {
