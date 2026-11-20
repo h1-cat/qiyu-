@@ -60,9 +60,9 @@ export function loadConfig(env = process.env) {
     alertMinLevel: (get('ALERT_MIN_LEVEL', 'medium') || 'medium').toLowerCase(),
     alertCooldownMin: num('ALERT_COOLDOWN_MIN', 10),
     llmEnabled: bool('LLM_ENABLED', false),
-    llmBaseUrl: get('LLM_BASE_URL', 'https://api.deepseek.com').replace(/\/+$/, ''),
+    llmBaseUrl: get('LLM_BASE_URL', '').replace(/\/+$/, ''),
     llmApiKey: get('LLM_API_KEY', ''),
-    llmModel: get('LLM_MODEL', 'deepseek-chat'),
+    llmModel: get('LLM_MODEL', ''),
     llmMode: (get('LLM_MODE', 'hybrid') || 'hybrid').toLowerCase(),
     dataDir
   };

@@ -80,9 +80,9 @@ v0.3.0 起扩展只做**只读采集**：抓到的七鱼会话帧全部上报服
 | `ALERT_MIN_LEVEL` | 通知阈值：low/medium/high | medium |
 | `ALERT_COOLDOWN_MIN` | 同会话同等级冷却分钟 | 10 |
 | `LLM_ENABLED` | 是否启用 LLM 语义分析 | false |
-| `LLM_BASE_URL` | OpenAI 兼容地址 | https://api.deepseek.com |
+| `LLM_BASE_URL` | OpenAI 兼容地址（自填） | 空 |
 | `LLM_API_KEY` | 模型 Key | 空 |
-| `LLM_MODEL` | 模型名 | deepseek-chat |
+| `LLM_MODEL` | 模型名（自填） | 空 |
 
 ### 飞书机器人创建
 飞书群 → 设置 → 群机器人 → 添加机器人 → **自定义机器人** → 复制 webhook。

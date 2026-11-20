@@ -349,7 +349,7 @@ const server = http.createServer(async (req, res) => {
       json(res, 200, {
         ...snapshot,
         qiyuAccount: store.qiyuAccount,
-        llmEnabled: config.llmEnabled && Boolean(config.llmApiKey),
+        llmEnabled: config.llmEnabled && Boolean(config.llmApiKey) && Boolean(config.llmBaseUrl),
         feishuConfigured: Boolean(config.feishuWebhook),
         alertMinLevel: config.alertMinLevel,
         cooldownMin: config.alertCooldownMin
@@ -367,7 +367,7 @@ const server = http.createServer(async (req, res) => {
         alertMinLevel: config.alertMinLevel,
         cooldownMin: config.alertCooldownMin,
         feishuConfigured: Boolean(config.feishuWebhook),
-        llmEnabled: config.llmEnabled && Boolean(config.llmApiKey),
+        llmEnabled: config.llmEnabled && Boolean(config.llmApiKey) && Boolean(config.llmBaseUrl),
         llmMode: config.llmMode
       });
       return;
@@ -410,8 +410,8 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'POST' && pathname === '/api/settings/llm/test') {
-      if (!config.llmApiKey) {
-        json(res, 400, { ok: false, error: '请先填写 API Key' });
+      if (!config.llmApiKey || !config.llmBaseUrl) {
+        json(res, 400, { ok: false, error: config.llmApiKey ? '请先填写接口地址' : '请先填写 API Key' });
         return;
       }
       const controller = new AbortController();
@@ -632,7 +632,11 @@ server.listen(config.port, config.host, () => {
   console.log(`[qiyu-risk-monitor] 监控台已启动：${url}`);
   console.log(`[qiyu-risk-monitor] 七鱼工作台：${config.qiyuWorkspaceUrl}`);
   console.log(`[qiyu-risk-monitor] 飞书：${config.feishuWebhook ? '已配置' : 'dry-run（未配置 webhook）'}`);
-  console.log(`[qiyu-risk-monitor] LLM：${config.llmEnabled && config.llmApiKey ? config.llmModel : '未启用（规则引擎）'}`);
+  const llmDesc = !config.llmEnabled ? '未启用（规则引擎）'
+    : !config.llmApiKey ? '已开启但缺 API Key（退回规则引擎）'
+      : !config.llmBaseUrl ? '已开启但缺接口地址（退回规则引擎）'
+        : (config.llmModel || '已开启（模型名未填）');
+  console.log(`[qiyu-risk-monitor] LLM：${llmDesc}`);
 });
 
 // 采集离线提醒：离线满 30 分钟推一次飞书；一直没恢复就每 2 小时再推一次；恢复在线后重新计时

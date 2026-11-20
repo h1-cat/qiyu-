@@ -106,7 +106,8 @@ export async function analyzeMessage({ message, sessionMessages = [], negativeCo
   const base = analyzeWithRules({ message, sessionMessages, negativeCount, learned });
 
   if (config.llmMode === 'rules') return base;
-  if (!config.llmEnabled || !config.llmApiKey) return base;
+  // 地址、Key 任一未填就退回规则引擎，避免拼出 /chat/completions 这种相对 URL
+  if (!config.llmEnabled || !config.llmApiKey || !config.llmBaseUrl) return base;
   // hybrid：低风险跳过模型；重点会话或 full 模式则全部走模型
   if (config.llmMode !== 'full' && base.level === 'low' && !priority) return base;
 
