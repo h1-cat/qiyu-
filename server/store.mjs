@@ -114,7 +114,7 @@ export class Store {
     session.messages.push(msg);
     // 按消息时间排序：多台采集、增量拉取时到达顺序可能是乱的，卡片和 LLM 上下文要按真实时间排
     if (session.messages.length > 1) {
-      session.messages.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+      session.messages.sort((a, b) => ((a.ts || 0) - (b.ts || 0)) || String(a.id || '').localeCompare(String(b.id || '')));
     }
     if (session.messages.length > MAX_SESSION_MESSAGES) session.messages.shift();
     session.lastSeen = msg.ts;

@@ -17,6 +17,47 @@ function formatTime(ts) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
 }
 
+function formatClock(ts) {
+  const d = new Date(ts || Date.now());
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+// 会话气泡：访客靠左、客服靠右，带 HH:mm:ss，跟七鱼聊天窗口一致
+const BUBBLE_MAX = 300;
+
+function buildTranscript(context) {
+  const out = [];
+  let lastClock = '';
+  for (const m of context) {
+    const isAgent = m.direction === 'agent';
+    const who = isAgent ? '客服' : '访客';
+    const color = isAgent ? 'blue' : 'grey';
+    const clock = m.ts ? formatClock(m.ts) : '';
+    // 同一秒内的连续消息不重复打时间，读起来像一段连续发言
+    const stamp = clock && clock !== lastClock ? clock : '';
+    if (clock) lastClock = clock;
+    const t = String(m.text || '').trim();
+    const safe = /^\s*\{[\s\S]*\}\s*$/.test(t) && /"ext"|"thumb"|"url"|"size"/.test(t) ? '[图片/文件]' : t;
+    const body = safe.length > BUBBLE_MAX ? safe.slice(0, BUBBLE_MAX) + '…' : safe;
+    const head = `<font color='${color}'>${who}${stamp ? `　${stamp}` : ''}</font>`;
+    const bubble = {
+      tag: 'markdown',
+      content: `${head}\n${body || '（空消息）'}`,
+      text_align: isAgent ? 'right' : 'left'
+    };
+    const pad = { tag: 'column', width: 'weighted', weight: 2, elements: [] };
+    const cell = { tag: 'column', width: 'weighted', weight: 5, elements: [bubble] };
+    out.push({
+      tag: 'column_set',
+      flex_mode: 'none',
+      horizontal_spacing: 'small',
+      columns: isAgent ? [pad, cell] : [cell, pad]
+    });
+  }
+  return out;
+}
+
 export function buildCard(alert, config) {
   const meta = LEVEL_META[alert.level] || LEVEL_META.medium;
   const queueHint = /(正在努力接待|客服咨询量过大|请耐心等待|排队中|正快马加鞭)/;
@@ -29,13 +70,8 @@ export function buildCard(alert, config) {
     agentLine ? `客服：${truncate(agentLine.text)}` : ''
   ].filter(Boolean).join('\n');
 
-  const context = (alert.context || [])
-    .map((m) => {
-      const t = String(m.text || '');
-      const safe = /^\s*\{[\s\S]*\}\s*$/.test(t) && /"ext"|"thumb"|"url"|"size"/.test(t) ? '[图片/文件]' : t;
-      return `${m.direction === 'agent' ? '客服' : '访客'}：${safe.slice(0, 200)}`;
-    })
-    .join('\n');
+  const contextMessages = Array.isArray(alert.context) ? alert.context : [];
+  const transcript = buildTranscript(contextMessages);
   const summary = `**风险等级**：${meta.label}（${alert.score} 分）　**会话 ID**：${alert.sessionId}\n**访客**：${alert.visitorName || '未知'}　**客服**：${alert.agentName || '未分配（排队中）'}\n**客服组**：${alert.groupName || '未分组'}　**消息时间**：${formatTime(alert.messageTime || alert.ts)}\n**采集账号**：${alert.collector || config.qiyuAccountName || '-'}`;
   const elements = [
     { tag: 'markdown', content: summary },
@@ -45,19 +81,19 @@ export function buildCard(alert, config) {
     { tag: 'markdown', content: `**处置建议**\n${truncate(alert.suggestion, 200)}` }
   ].filter(Boolean);
 
-  if (context) {
+  if (transcript.length) {
     elements.push({
       tag: 'collapsible_panel',
       expanded: false,
       header: {
-        title: { tag: 'markdown', content: '**查看完整会话**' },
+        title: { tag: 'markdown', content: `**查看完整会话**　<font color='grey'>共 ${contextMessages.length} 条 · 时间正序</font>` },
         vertical_align: 'center',
         icon: { tag: 'standard_icon', token: 'down-small-ccm_outlined', size: '16px 16px' },
         icon_position: 'right',
         icon_expanded_angle: -180
       },
       border: { color: 'grey', corner_radius: '5px' },
-      elements: [{ tag: 'markdown', content: context }]
+      elements: transcript
     });
   }
 

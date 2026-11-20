@@ -136,9 +136,9 @@ function makeAlert(msg, analysis, session) {
     suggestion: analysis.suggestion,
     evidence: analysis.evidence,
     context: [...(session?.messages || [])]
-      .sort((a, b) => (a.ts || 0) - (b.ts || 0))
+      .sort((a, b) => ((a.ts || 0) - (b.ts || 0)) || String(a.id || '').localeCompare(String(b.id || '')))
       .slice(-20)
-      .map((m) => ({ direction: m.direction, text: String(m.text || '').slice(0, 200) })),
+      .map((m) => ({ direction: m.direction, text: String(m.text || '').slice(0, 500), ts: m.ts || 0 })),
     visitorName: msg.visitorName || session?.meta?.visitorName || '',
     agentName,
     groupName: humanReplied ? (meta?.group || '') : '排队中',
