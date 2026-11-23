@@ -20,18 +20,39 @@
       console.warn(TAG, '注入失败', e);
     }
   }
-  // 只在七鱼监控页注入采集脚本，其他七鱼标签页保持原样，避免影响页面加载
-  if (isMonitorPage()) inject();
+  var injected = false;
+  // 只在七鱼监控页注入采集脚本，其他七鱼标签页保持原样，避免影响页面加载。
+  // 七鱼是单页应用，打开时可能先落在别的页面，路由变化时还会再调一次。
+  function ensureInject() {
+    if (injected || !isMonitorPage()) return;
+    injected = true;
+    inject();
+  }
+  ensureInject();
 
-  function send(message) {
+  // 带超时：MV3 下 background 没响应时消息回调可能永远不回来，
+  // 不设超时会让浮层状态一直停在「检测中」。
+  function send(message, timeoutMs) {
     return new Promise(function (resolve) {
+      var done = false;
+      var timer = setTimeout(function () {
+        if (done) return;
+        done = true;
+        resolve(null);
+      }, timeoutMs || 8000);
+      function finish(resp) {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        resolve(resp);
+      }
       try {
         chrome.runtime.sendMessage(message, function (resp) {
           void chrome.runtime.lastError;
-          resolve(resp);
+          finish(resp);
         });
       } catch (e) {
-        resolve(null);
+        finish(null);
       }
     });
   }
@@ -192,6 +213,9 @@
     } else if (mode === 'local') {
       el.textContent = '连不上服务器 · 数据暂存';
       el.style.color = '#ffa940';
+    } else if (mode === 'timeout') {
+      el.textContent = '扩展没响应 · 刷新页面重试';
+      el.style.color = '#ff5c5c';
     } else {
       el.textContent = '采集离线';
       el.style.color = '#ff5c5c';
@@ -235,21 +259,46 @@
   }
 
   if (isMonitorPage()) setTimeout(showMonitorToast, 1200);
-  var lastPath = location.pathname;
+  var lastUrl = location.href;
   setInterval(function () {
-    if (location.pathname !== lastPath) {
-      lastPath = location.pathname;
+    if (location.href !== lastUrl) {
+      lastUrl = location.href;
+      ensureInject();
+      if (isMonitorPage()) startHeartbeat();
       showMonitorToast();
     }
   }, 1200);
 
+  // 账号探测要扫全页 DOM，重页面上很慢，缓存 5 分钟，别每 20 秒扫一遍
+  var cachedAccount = null;
+  var accountAt = 0;
+  function currentAccount() {
+    var now = Date.now();
+    if (cachedAccount && now - accountAt < 5 * 60 * 1000) return cachedAccount;
+    try { cachedAccount = detectAccount(); } catch (e) { cachedAccount = null; }
+    accountAt = now;
+    return cachedAccount;
+  }
+
   // 心跳：让监控台显示“采集在线”+ 当前七鱼账号
   async function heartbeat() {
-    const resp = await send({ type: 'heartbeat', pageUrl: location.href, account: detectAccount() });
-    setToastStatus(!resp ? 'offline' : (resp.local ? 'local' : 'online'));
+    const resp = await send({ type: 'heartbeat', pageUrl: location.href, account: currentAccount() });
+    if (resp) {
+      setToastStatus(resp.local ? 'local' : 'online');
+    } else if (document.getElementById('qrm-toast-status')) {
+      // 只有浮层还在时才改状态，避免关掉提示后无谓报错
+      setToastStatus('timeout');
+    }
   }
-  if (isMonitorPage()) {
-    setTimeout(heartbeat, 2500);
+
+  // 心跳不能只在脚本启动时注册一次：七鱼打开时可能先落在别的页面，
+  // 等切到监控页才需要开始，用 flag 保证只注册一次。
+  var heartbeatStarted = false;
+  function startHeartbeat() {
+    if (heartbeatStarted) return;
+    heartbeatStarted = true;
+    setTimeout(heartbeat, 1200);
     setInterval(heartbeat, 20000);
   }
+  if (isMonitorPage()) startHeartbeat();
 })();

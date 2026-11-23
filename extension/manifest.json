@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "七鱼会话风险采集",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "只读采集七鱼客服工作台会话消息，上报监控服务；分析与飞书推送由服务端完成",
   "permissions": [
     "storage",
